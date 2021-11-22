@@ -1,0 +1,233 @@
+---
+title: "Assignment-3"
+author: "Drasti Shah"
+output: pdf_document
+---
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#Importing the libraries
+library(rstatix)
+library(knitr)
+library(readxl)
+library(emmeans)
+```
+
+<br>
+**Question 1**
+
+Always wanting to have the latest information to help local businesses, researchers in a community development organization polled several newly launched Canadian companies to find out how much money they spent on starting up. Companies in the survey fell into five different categories: pizzerias, bakeries, shoe stores, gift stores and pet stores. Based on the data provided, are there any differences in startup costs from one category of business to another? Write up your response as per the appropriate template in the workshop slides.
+
+**Answer 1:**
+
+**Null Hypothesis**: There is no difference in startup costs from one category of business to another.
+
+**Alternative Hypothesis**: There is a difference in startup costs from one category of business to another.
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#Since we only need to find the difference in the starup costs between different businesses we will use one- way ANOVA
+first <- read_excel("A3.1-BusinessStartups.xlsx")
+first_df <- as.data.frame(first)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#just like with the t-test, we need to understand how our data is grouped
+category.grouping <- group_by(first, business)
+get_summary_stats(category.grouping, startup_costs, type = "mean_sd")
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+identify_outliers(category.grouping, startup_costs)
+#yay! there are no extreme outliers in the sample
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+# Shapiro-wilk test to check the normality of our data
+# we test for normality within the differences distribution
+#if p is > .05, the distribution is normal
+shapiro_test(category.grouping, startup_costs)
+#yay! Differences are normally distributed
+#we DON’T need to test homogeneity of variances, since we’re
+#only evaluating ONE field – the differences column!
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#we’re not done testing yet!
+#finally, we need to test for homogeneity of variance
+#the ~ operator is a model separator:
+#what’s on the right of the ~ influences what’s on the left
+#if p is > .05, variances are homogenous
+levene_test(first_df, startup_costs ~ business)
+#hooray! Levene says our variances are homogenous!
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#let’s run that ANOVA!
+anova_test(first_df, startup_costs ~ business)
+#here’s a map on how to interpret this:
+#Effect = grouping variable (in this case treatment)
+#DFn = degrees of freedom for your groups (k – 1)
+#DFd = degrees of freedom for your sample (n – k)
+#F = your actual ANOVA ratio!
+#p = your significance statistic
+#p<.05 = how significant is your p in stars?
+#ges = generalized eta square (effect size!)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#we found significance, so we need to run a post hoc!
+#let’s run a Tukey! it works like the one you ran for chi-square last time
+tukey_hsd(first_df, startup_costs ~ business)
+#in this case, it’s between bakery and pets
+#you’ll see that the means for bakery and pets are 11 and 16 respectively
+#the pets mean is significantly greater than the bakery mean!
+```
+
+<br>
+The current study sought to determine whether or not different categories of business had different startup costs. 60 companies were sampled by the researchers and assigned to each of 5 business groups: bakery(n = 11), gifts(n = 10), pets(n = 16), pizzeria(n = 13) and shoes(n = 10). Researchers polled several newly launched Canadian companies to find out the money they spent on starting up.
+
+The startup costs in the sample contained no extreme outliers. A Shapiro-Wilk test demonstrated normality by group and, Levene's test demonstrated homogeneity of variance. A one-way ANOVA revealed that the startup costs were significantly different between different business categories.
+F(4,55) = 3.24, p < 0.05, n2 = 0.19
+
+The initial cost for startups such as pets(M = 51626, SD = 27075) was pretty low when compared to shoes(M = 72300, SD = 31365), pizzeria(M = 83000, SD= 34135), gifts(M = 87000, SD = 35904), and bakery(M = 92901, SD = 38893) which had significantly high startup costs.
+
+Tukey's post-hoc analyses revealed that the decrease in the startup costs from the bakery business to pets business(-40466, 95%CI [-77121 - -3810]) was statistically significant (p < 0.05), but no other business categories' differences were statistically significant.
+
+**Question 2**
+
+Oh no! An invasive species of moth has taken up residence in a forest just outside Peterborough! In order to measure the extent of proliferation, environmental scientists need to count the moths, but their elusive nature has made this difficult. To deal with this challenge, a research team has developed three different lures (an appealing chemical, scented matter and sugar) and placed them in specially designed moth traps at four different levels of the trees (ground level, lower branches, middle branches and top branches). Based on the data provided, is there an interaction effect between the type of lure used to catch the moths and location of the traps? Write up your response as per the appropriate template in the workshop slides.
+
+**Answer 2**
+
+**Null Hypothesis**: There is no interaction effect between the type of lure used to catch the moths and location of the traps. 
+
+**Alternative Hypothesis**: There is an interaction effect between the type of lure used to catch the moths and location of the traps. 
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#Since we only need to find the interaction effect we will use two-way ANOVA.
+second <- read_excel("A3.2-MothLures.xlsx")
+second_df <- as.data.frame(second)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+count.grouping <- group_by(second_df, lure, location)
+get_summary_stats(count.grouping, count, type = "mean_sd")
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+identify_outliers(count.grouping, count)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+shapiro_test(count.grouping, count)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+levene_test(second_df, count ~ lure*location)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+with(second_df,interaction.plot(response = count,x.factor = location, trace.factor = lure, type = "b"))
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+anova_test(second_df, count ~ lure*location)
+```
+
+<br>
+The current study sought to examine if there are any interaction effects between the type of lure and the location of moth traps. 60 samples were collected to measure the extent of proliferation. There were 15 samples for every location(top, middle, lower, ground). There were 5 samples for every combination(for ex. chemical-ground, scent-middle, sugar-lower).
+
+The sample contained no extreme outliers. A Shapiro-Wilk test demonstrated normality by group and, Levene's test demonstrated homogeneity of variance. There was a statistically significant interaction effect between the type of lure and the location of the moth traps on the count, F(6, 48) = 7.638, p<0.01, n2 = 0.488. Hence we reject the null hypothesis and conclude that there is an interaction effect between the type of lure and location of the moth traps.
+
+**Question 3**
+
+If you found an interaction effect in Question 2 (hint: there’s probably an interaction effect in Question 2), use what you learned in workshop to match the different lure types with the trap locations in order to maximize the number of moths the scientists can catch!
+This doesn’t need to be a long write-up – just list each lure/location combo and justify your answer.
+
+**Answer 3:**
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#we found significance in the previous anova test, so we need to run a post hoc!
+#but our model is too complex for a Tukey, oh no!
+#let’s create a linear model of our complex effect using the lm function
+three_model <- lm(count ~ lure*location, data = second_df)
+#this model has error. we can feed this error into a ONE-way ANOVA of a simpler effect!
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+lure.grouping <- group_by(second_df, lure)
+anova_test(lure.grouping, count~location, error = three_model)
+#we used the error of the complex model to peer inside the interaction effect!
+#there is a significant difference in mean moth catch count between chemical, scent and sugar lure for every location type
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#we’re still not done! we don’t yet know WHERE the differences lie!
+#we need to run pairwise comparisons to get at this detail
+#the rstatix package has a function to help with this, but needs another package to work
+emmeans_test(lure.grouping, count ~ location, p.adjust.method = "bonferroni")
+#that was WAY easier than having to figure these out by hand
+#the function goes through ALL possible combinations and finds the significant ones!
+#these ones were all significant
+```
+
+<br>
+Consequently, an analysis of the main effects for the location was performed with statistical significance receiving a Bonferroni adjustment. There was a significant difference in the mean count for all the lure types, chemical: F(3, 48) = 1233, scent: F(3,48) = 1244, sugar: F(3, 48) = 1454 with p < 0.0001 for all and at every location type.
+
+All pairwise comparisons were analyzed between the different locations organized by the lure type. The count was significantly different between all locations for different lure types(p < 0.05).
+
+**Question 4**
+
+For the last 31 years my neighbour in Peterborough has been tracking the temperature and number of trick-or-treaters on Hallowe’en. She says that she has noticed that there are more costumed kids around when the temperature is warmer and fewer when it is
+colder.
+a) Verify whether the data she has collected supports her claim using a linear model.
+b) If there is a relationship, interpret the model output (e.g., interpret the regression coefficients: intercept and slope as a start).
+c) The temperature next Hallowe’en is forecast to be 10◦C warmer than this year, how many more trick-or-treaters can she expect to get?
+d) What are the limitations of using a linear model for this data? (e.g., where does the model start to return nonsense results? Any other limitations?)
+
+**Answer 4:**
+
+**Null hypothesis**: Temperature has no impact on the number of costumed trick-or-treaters on Hallowe’en.
+
+**Alternative hypothesis**: Temperature has a significant impact on the number of costumed trick-or-treaters on Hallowe’en.
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+#Lets import the data first
+fourth <- read_excel("A3.3-TrickOrTreat.xlsx")
+fourth_df <- as.data.frame(fourth)
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+# let's get some summary stats for the grouped data
+get_summary_stats(fourth_df, trickOrTreaters, type = "mean_sd")
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+identify_outliers(fourth_df, trickOrTreaters)
+# yayyyy!!! there are no outliers found in this data
+```
+
+```{r,echo=FALSE,warning=FALSE,results=FALSE,message=FALSE}
+# let's create the linear regression model to check if temperature has any impact on costumed trickOrTreaters
+four.model <- lm(trickOrTreaters ~ Temperature.C, data = fourth_df)
+summary(four.model)
+```
+
+<br>
+a) The current study sought to determine if there is an increase in costumed kids on the day of Hallowe'en with the increase in temperature i.e. as it gets warmer.The data showed no extreme outliers. When we ran a linear regression model on the data, we found temperature to be highly significant with (p-value < 0.001). So we can reject the null hypothesis and conclude that temperature has a significant impact on number of costumed trick-or-treaters on Hallowe’en.
+
+b) The model confirms that there is a significant relationship between temperature and number of costumed trick-or-treaters on Hallowe’en. Interpreting the model output:
+1) The intercept is 2.6833.
+2) The slope is 3.1239.
+
+c) The Temperature Estimate/Coefficient shown in the model output suggests that a unit increase in temperature will increase the number of costumed trick-or-treaters on Hallowe’en with the value of Temperature Estimate/Coefficient which is 3.1239.
+
+1 unit increase in temperature will lead to an increase in 3.1239 costumed trick-or-treaters on Hallowe’en
+So, 10 units increase in temperature will lead to 10 * 3.1239 = 31.239 = 31(rounding up as kids count cannot be fractional).
+
+So for year 2022 we will expect to see trickOrTreaters(2021) + difference = 31 + 31 = 62.
+
+To conclude, we can infer that we can expect to see 63 costumed kids as trick-or-treaters on Hallowe’en next year in Peterborough.
+
+d) In this case, the linear model would only be able to predict correct values for a small range of temperatures.
+
+For example, if we consider the previous example and consider that next year the temperature will be raised by 70 degrees: we will be getting a value of = 31 + 70(3.1239) = 249, Which is obviously not possible, because at 81 degrees of temperature the earth won't even exist. So after a given point of time the model predictions makes no sense and thus limits us from using it on our data.
